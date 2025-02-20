@@ -1,4 +1,4 @@
-﻿namespace WebApplication1.Models
+﻿namespace BooksApi.Models
 {
     public class Book
     {
@@ -7,12 +7,11 @@
         public string Author { get; set; }
         public Shelf? Shelf { get; set; }
 
-        public Book(int id, string name, string author, Shelf shelf)
+        public Book(int id, string name, string author)
         {
             Id = id;
             Name = name;
             Author = author;
-            Shelf = shelf;
         }
     }
 }

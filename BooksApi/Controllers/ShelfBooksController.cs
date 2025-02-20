@@ -1,31 +1,67 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using WebApplication1.Models;
-using WebApplication1.Repositories;
+﻿using Microsoft.AspNetCore.Mvc;
+using BooksApi.Models;
+using BooksApi.Repositories;
 
-namespace WebApplication1.Controllers
+namespace BooksApi.Controllers
 {
-    [Route("/api/shelves/{shelfId:int}/books")]
+    [Route("api/shelves/{shelfId}/books")]
     [ApiController]
     public class ShelfBooksController : ControllerBase
     {
-        private readonly ShelfRepository shelfRepository = new ShelfRepository();
-        private readonly BookRepository bookRepository = new BookRepository();
-
-        // za dobavljanje knjiga koje se nalaze na određenoj polici
+        private ShelfRepository shelfRepository = new ShelfRepository();
+        private BookRepository bookRepository = new BookRepository();
+        
         [HttpGet]
-        public ActionResult<List<Book>> GetShelfBooks(int shelfId)
+        public ActionResult<List<Book>> Get(int shelfId)
         {
-            Shelf? shelf = shelfRepository.GetById(shelfId);  // ? jer možda polica ne postoji (možemo dobiti null kao povratnu vrednost)
-            if (shelf == null)
+            if (!ShelfRepository.Data.ContainsKey(shelfId))
             {
-                // ako polica ne postoji vraćamo statusni kod 404 NotFound
                 return NotFound();
             }
-            List<Book> shelfBooks = bookRepository.GetByShelf(shelfId);
-            // vraćamo pronađene knjige uz statusni kod 200 OK
+
+            List<Book> allBooks = BookRepository.Data.Values.ToList();
+            List<Book> shelfBooks = new List<Book>();
+            foreach (Book book in allBooks)
+            {
+                if (book.Shelf != null && book.Shelf.Id == shelfId)
+                {
+                    shelfBooks.Add(book);
+                }
+            }
+            
             return Ok(shelfBooks);
         }
-    }
 
+        [HttpPut("{bookId}")]
+        public ActionResult<Book> Add(int bookId, int shelfId)
+        {
+            if (!BookRepository.Data.ContainsKey(bookId))
+            {
+                return NotFound("Book not found");
+            }
+            if (!ShelfRepository.Data.ContainsKey(shelfId))
+            {
+                return NotFound("Shelf not found");
+            }
+
+            Book book = BookRepository.Data[bookId];
+            book.Shelf = ShelfRepository.Data[shelfId];
+            bookRepository.Save();
+            
+            return Ok(book);
+        }
+
+        [HttpDelete("{bookId}")]
+        public ActionResult<List<Book>> Remove(int bookId)
+        {
+            if (!BookRepository.Data.ContainsKey(bookId))
+            {
+                return NotFound("Book not found");
+            }
+            BookRepository.Data[bookId].Shelf = null;
+            bookRepository.Save();
+
+            return NoContent();
+        }
+    }
 }

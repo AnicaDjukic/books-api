@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace WebApplication1.Models;
+﻿namespace BooksApi.Models;
 
 public class Shelf
 {

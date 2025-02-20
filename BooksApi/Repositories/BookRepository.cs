@@ -1,114 +1,52 @@
-﻿using System.Text;
-using WebApplication1.Models;
+﻿using BooksApi.Models;
 
-namespace WebApplication1.Repositories
+namespace BooksApi.Repositories
 {
     public class BookRepository
     {
+        private const string filePath = "data/books.csv"; // Putanja je prostija u veb aplikaciji
+        public static Dictionary<int, Book> Data;
 
-        private const string filePath = "Resources/books.csv";
-
-        private const string separator = "|";
-
-        public List<Book> GetAll()
+        public BookRepository()
         {
-            List<Book> books = new List<Book>();
-            foreach (string line in File.ReadLines(filePath))
+            if (Data == null)
             {
-                string[] csvValues = line.Split(separator);
-                int id = int.Parse(csvValues[0]);
-                string name = csvValues[1];
-                string author = csvValues[2];
-                Shelf shelf = null;
-                if (csvValues[3] != "")
+                Load();
+            }
+        }
+
+        private void Load()
+        {
+            Data = new Dictionary<int, Book>();
+            string[] lines = File.ReadAllLines(filePath);
+            foreach (string line in lines)
+            {
+                string[] attributes = line.Split('|');
+                int id = int.Parse(attributes[0]);
+                string name = attributes[1];
+                string author = attributes[2];
+                Book book = new Book(id, name, author);
+                Data[id] = book;
+
+                if (attributes[3] == "")
                 {
-                    shelf = new Shelf(int.Parse(csvValues[3]), "");
+                    continue;
                 }
-                Book book = new Book(id, name, author, shelf);
-                books.Add(book);
+                // Uveži knjige i police
+                int shelfId = int.Parse(attributes[3]);
+                book.Shelf = ShelfRepository.Data[shelfId];
             }
-            return books;
         }
 
-        public Book? GetById(int id)
+        public void Save()
         {
-            List<Book> books = GetAll();
-            foreach (Book book in books)
+            List<string> lines = new List<string>();
+            foreach (Book r in Data.Values)
             {
-                if (book.Id == id)
-                {
-                    return book;
-                }
+                string shelfId = r.Shelf == null ? "" : r.Shelf.Id.ToString();
+                lines.Add($"{r.Id}|{r.Name}|{r.Author}|{shelfId}");
             }
-            return null;
+            File.WriteAllLines(filePath, lines);
         }
-
-        public Book Save(Book newBook)
-        {
-            List<Book> books = GetAll();
-            newBook.Id = books.Any() ? books.Max(x => x.Id) + 1 : 1;
-            books.Add(newBook);
-            SaveAll(books);
-            return newBook;
-        }
-
-        public Book Update(Book newBook)
-        {
-            List<Book> books = GetAll();
-            foreach (Book book in books)
-            {
-                if (book.Id == newBook.Id)
-                {
-                    book.Name = newBook.Name;
-                    book.Author = newBook.Author;
-                    book.Shelf = newBook.Shelf;
-                    // Nakon ažuriranja knjige u books listi sad upiši sve knjige ponovo
-                    SaveAll(books);
-                    break;
-                }
-            }
-            return newBook;
-        }
-
-        public bool Delete(int id)
-        {
-            List<Book> books = GetAll();
-            foreach (Book book in books)
-            {
-                if (book.Id == id)
-                {
-                    books.Remove(book);
-                    // Nakon uklanjanja knjige iz books liste sad upiši sve knjige ponovo
-                    SaveAll(books);
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public List<Book> GetByShelf(int shelfid)
-        {
-            List<Book> books = new List<Book>();
-            foreach (Book book in GetAll())
-            {
-                if (book.Shelf?.Id == shelfid)
-                {
-                    books.Add(book);
-                }
-            }
-            return books;
-        }
-
-        private void SaveAll(List<Book> books)
-        {
-            StringBuilder output = new StringBuilder();
-            foreach (Book b in books)
-            {
-                string newLine = b.Id.ToString() + separator + b.Name + separator + b.Author + separator + b.Shelf?.Id;
-                output.AppendLine(string.Join(separator, newLine));
-            }
-            File.WriteAllText(filePath, output.ToString());
-        } 
     }
 }

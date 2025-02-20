@@ -1,94 +1,42 @@
-﻿using System.Text;
-using WebApplication1.Models;
-using static System.Reflection.Metadata.BlobBuilder;
+﻿using BooksApi.Models;
 
-namespace WebApplication1.Repositories
+namespace BooksApi.Repositories
 {
     public class ShelfRepository
     {
+        private const string filePath = "data/shelves.csv"; // Putanja je prostija u veb aplikaciji
+        public static Dictionary<int, Shelf> Data;
 
-        private const string filePath = "Resources/shelves.csv";
-
-        private const string separator = "|";
-
-        public List<Shelf> GetAll()
+        public ShelfRepository()
         {
-            List<Shelf> shelves = new List<Shelf>();
-            foreach (string line in File.ReadLines(filePath))
+            if (Data == null)
             {
-                string[] csvValues = line.Split(separator);
-                int id = int.Parse(csvValues[0]);
-                string name = csvValues[1];
-                Shelf shelf = new(id, name);
-                shelves.Add(shelf);
+                Load();
             }
-            return shelves;
         }
 
-        public Shelf? GetById(int id)
+        private void Load()
         {
-            List<Shelf> shelves = GetAll();
-            foreach (Shelf shelf in shelves)
+            Data = new Dictionary<int, Shelf>();
+            string[] lines = File.ReadAllLines(filePath);
+            foreach (string line in lines)
             {
-                if (shelf.Id == id)
-                {
-                    return shelf;
-                }
+                string[] attributes = line.Split('|');
+                int id = int.Parse(attributes[0]);
+                string name = attributes[1];
+                Shelf shelf = new Shelf(id, name);
+                Data[id] = shelf;
             }
-            return null;
         }
 
-        public Shelf Save(Shelf newShelf)
+        public void Save()
         {
-            List<Shelf> shelves = GetAll();
-            newShelf.Id = shelves.Any() ? shelves.Max(x => x.Id) + 1 : 1;
-            shelves.Add(newShelf);
-            SaveAll(shelves);
-            return newShelf;
-        }
-
-        public Shelf? Update(int id, Shelf newShelf)
-        {
-            List<Shelf> shelves = GetAll();
-            foreach (Shelf Shelf in shelves)
+            List<string> lines = new List<string>();
+            foreach (Shelf s in Data.Values)
             {
-                if (Shelf.Id == id)
-                {
-                    Shelf.Name = newShelf.Name;
-                    // Nakon ažuriranja police u shelves listi sad upiši sve police ponovo
-                    SaveAll(shelves);
-                    return Shelf;
-                }
+                lines.Add($"{s.Id}|{s.Name}");
             }
-            return null;
-        }
-
-        public bool Delete(int id)
-        {
-            List<Shelf> shelves = GetAll();
-            foreach (Shelf Shelf in shelves)
-            {
-                if (Shelf.Id == id)
-                {
-                    shelves.Remove(Shelf);
-                    // Nakon uklanjanja police iz shelves liste sad upiši sve police ponovo
-                    SaveAll(shelves);
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void SaveAll(List<Shelf> shelves)
-        {
-            StringBuilder output = new StringBuilder();
-            foreach (Shelf b in shelves)
-            {
-                string newLine = b.Id.ToString() + separator + b.Name;
-                output.AppendLine(string.Join(separator, newLine));
-            }
-            File.WriteAllText(filePath, output.ToString());
+            File.WriteAllLines(filePath, lines);
         }
     }
 }

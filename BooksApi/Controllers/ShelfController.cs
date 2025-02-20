@@ -1,74 +1,97 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WebApplication1.Models;
-using WebApplication1.Repositories;
+using BooksApi.Models;
+using BooksApi.Repositories;
 
-namespace WebApplication1.Controllers;
-
-[Route("api/shelves")]
-[ApiController]
-public class ShelfController : ControllerBase
+namespace BooksApi.Controllers
 {
-    private readonly ShelfRepository shelfRepository = new ShelfRepository();
 
-    [HttpGet]
-    public ActionResult<List<Shelf>> GetAll()
+    [Route("api/shelves")]
+    [ApiController]
+    public class ShelfController : ControllerBase
     {
-        List<Shelf> shelves = shelfRepository.GetAll();
-        return Ok(shelves);
-    }
+        private ShelfRepository shelfRepository = new ShelfRepository();
 
-    [HttpGet("{id:int}")]
-    public ActionResult<Shelf> GetById(int id)
-    {
-        Shelf? Shelf = shelfRepository.GetById(id);
-        if (Shelf == null)
+        [HttpGet]
+        public ActionResult<List<Shelf>> GetAll()
         {
-            return NotFound();
-        }
-        return Ok(Shelf);
-
-    }
-
-    [HttpPost]
-    public ActionResult<Shelf> Create([FromBody] Shelf newShelf)
-    {
-        // Validacija podataka
-        if (newShelf.Name == null || newShelf.Name.Trim() == "")
-        {
-            return BadRequest();
-        }
-        Shelf savedShelf = shelfRepository.Save(newShelf);
-        return Ok(savedShelf);
-    }
-
-    [HttpPut("{id:int}")]
-    public ActionResult<Shelf> Update(int id, [FromBody] Shelf newShelf)
-    {
-        // Validacija podataka
-        if (newShelf.Name == null || newShelf.Name.Trim() == "")
-        {
-            return BadRequest();
+            List<Shelf> shelves = ShelfRepository.Data.Values.ToList();
+            return Ok(shelves);
         }
 
-        Shelf? updatedShelf = shelfRepository.Update(id, newShelf);
-        if (updatedShelf == null)
+        [HttpGet("{id}")]
+        public ActionResult<Shelf> GetById(int id)
         {
-            return NotFound();
+            if (!ShelfRepository.Data.ContainsKey(id))
+            {
+                return NotFound();
+            }
+
+            return Ok(ShelfRepository.Data[id]);
         }
 
-        return Ok(updatedShelf);
-    }
 
-    [HttpDelete("{id:int}")]
-    public ActionResult Delete(int id)
-    {
-        bool sucess = shelfRepository.Delete(id);
-        if (sucess)
+        [HttpPost]
+        public ActionResult<Shelf> Create([FromBody] Shelf newShelf)
         {
+            if (string.IsNullOrWhiteSpace(newShelf.Name))
+            {
+                return BadRequest();
+            }
+
+            newShelf.Id = SracunajNoviId(ShelfRepository.Data.Keys.ToList());
+            ShelfRepository.Data[newShelf.Id] = newShelf;
+            shelfRepository.Save();
+
+            return Ok(newShelf);
+        }
+
+
+        [HttpPut("{id}")]
+        public ActionResult<Shelf> Update(int id, [FromBody] Shelf uShelf)
+        {
+            if (string.IsNullOrWhiteSpace(uShelf.Name))
+            {
+                return BadRequest();
+            }
+
+            if (!ShelfRepository.Data.ContainsKey(id))
+            {
+                return NotFound();
+            }
+
+            Shelf shelf = ShelfRepository.Data[id];
+            shelf.Name = uShelf.Name;
+            shelfRepository.Save();
+
+            return Ok(shelf);
+        }
+
+        [HttpDelete("{id}")]
+        public ActionResult Delete(int id)
+        {
+            if (!ShelfRepository.Data.ContainsKey(id))
+            {
+                return NotFound();
+            }
+
+            ShelfRepository.Data.Remove(id);
+            shelfRepository.Save();
+
             return NoContent();
         }
 
-        return NotFound();
+        private int SracunajNoviId(List<int> identifikatori)
+        {
+            int maxId = 0;
+            foreach (int id in identifikatori)
+            {
+                if (id > maxId)
+                {
+                    maxId = id;
+                }
+            }
+
+            return maxId + 1;
+        }
     }
 }
-

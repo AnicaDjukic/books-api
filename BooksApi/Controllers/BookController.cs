@@ -1,80 +1,96 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using WebApplication1.Models;
-using WebApplication1.Repositories;
+using BooksApi.Models;
+using BooksApi.Repositories;
 
-namespace WebApplication1.Controllers
+namespace BooksApi.Controllers
 {
+    [Route("api/books")]
     [ApiController]
     public class BookController : ControllerBase
     {
+        private ShelfRepository shelfRepository = new ShelfRepository();
+        private BookRepository bookRepository = new BookRepository();
 
-        private readonly BookRepository bookRepository = new BookRepository();
-
-        [HttpGet("/api/books")]
+        [HttpGet]
         public ActionResult<List<Book>> GetAll()
         {
-            List<Book> books = bookRepository.GetAll();
+            List<Book> books = BookRepository.Data.Values.ToList();
             return Ok(books);
         }
-
-        [HttpGet("/api/books/{id:int}")]
+        
+        [HttpGet("{id}")]
         public ActionResult<Book> GetById(int id)
         {
-            Book? book = bookRepository.GetById(id);
-            if (book == null)
+            if (!BookRepository.Data.ContainsKey(id))
             {
                 return NotFound();
             }
-            return Ok(book);
-
+            return Ok(BookRepository.Data[id]);
         }
 
-        [HttpPost("/api/books")]
+
+        [HttpPost]
         public ActionResult<Book> Create([FromBody] Book newBook)
         {
-            // Validacija podataka
-            if (newBook.Name == null || newBook.Name.Trim() == "" || newBook.Author == null || newBook.Author.Trim() == "")
+            if (string.IsNullOrWhiteSpace(newBook.Name) || string.IsNullOrWhiteSpace(newBook.Author))
             {
                 return BadRequest();
             }
-            Book savedBook = bookRepository.Save(newBook);
-            return Ok(savedBook);
+
+            newBook.Id = SracunajNoviId(BookRepository.Data.Keys.ToList());
+            BookRepository.Data[newBook.Id] = newBook;
+            bookRepository.Save();
+
+            return Ok(newBook);
         }
 
-        [HttpPut("/api/books/{id:int}")]
-        public ActionResult<Book> Update(int id, [FromBody] Book newBook)
+        
+        [HttpPut("{id}")]
+        public ActionResult<Book> Update(int id, [FromBody] Book uBook)
         {
-            // Validacija podataka
-            if (newBook.Name == null || newBook.Name.Trim() == "" || newBook.Author == null || newBook.Author.Trim() == "")
+            if (string.IsNullOrWhiteSpace(uBook.Name) || string.IsNullOrWhiteSpace(uBook.Author))
             {
                 return BadRequest();
             }
-
-            Book? book = bookRepository.GetById(id);
-            if (book == null)
+            if (!BookRepository.Data.ContainsKey(id))
             {
                 return NotFound();
             }
 
-            // ažuriramo samo naziv i autora, za vezu sa policom će biti zadužen drugi kontroler
-            book.Name = newBook.Name;
-            book.Author = newBook.Author;
+            Book book = BookRepository.Data[id];
+            book.Name = uBook.Name;
+            book.Author = uBook.Author;
+            bookRepository.Save();
 
-            Book updatedBook = bookRepository.Update(book);
-
-            return Ok(updatedBook);
+            return Ok(book);
         }
-
-        [HttpDelete("/api/books/{id:int}")]
+        
+        [HttpDelete("{id}")]
         public ActionResult Delete(int id)
         {
-            bool sucess = bookRepository.Delete(id);
-            if (sucess)
+            if (!BookRepository.Data.ContainsKey(id))
             {
-                return NoContent();
+                return NotFound();
             }
 
-            return NotFound();
+            BookRepository.Data.Remove(id);
+            bookRepository.Save();
+
+            return NoContent();
+        }
+
+        private int SracunajNoviId(List<int> identifikatori)
+        {
+            int maxId = 0;
+            foreach (int id in identifikatori)
+            {
+                if (id > maxId)
+                {
+                    maxId = id;
+                }
+            }
+
+            return maxId + 1;
         }
     }
 }
