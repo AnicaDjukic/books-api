@@ -35,13 +35,14 @@ namespace BooksApi.Controllers
         [HttpPut("{bookId}")]
         public ActionResult<Book> Add(int bookId, int shelfId)
         {
-            if (!BookRepository.Data.ContainsKey(bookId))
-            {
-                return NotFound("Book not found");
-            }
             if (!ShelfRepository.Data.ContainsKey(shelfId))
             {
                 return NotFound("Shelf not found");
+            }
+
+            if (!BookRepository.Data.ContainsKey(bookId))
+            {
+                return NotFound("Book not found");
             }
 
             Book book = BookRepository.Data[bookId];
@@ -52,7 +53,7 @@ namespace BooksApi.Controllers
         }
 
         [HttpDelete("{bookId}")]
-        public ActionResult<List<Book>> Remove(int bookId)
+        public ActionResult Remove(int bookId)
         {
             if (!BookRepository.Data.ContainsKey(bookId))
             {
