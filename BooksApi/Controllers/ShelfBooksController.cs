@@ -33,7 +33,7 @@ namespace BooksApi.Controllers
         }
 
         [HttpPut("{bookId}")]
-        public ActionResult<Book> Add(int bookId, int shelfId)
+        public ActionResult<Book> Add(int shelfId, int bookId)
         {
             if (!ShelfRepository.Data.ContainsKey(shelfId))
             {
